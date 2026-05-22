@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import sqlite3
-from pathlib import Path
+import time
 
 import pandas as pd
 import streamlit as st
@@ -15,13 +15,13 @@ from src.charts import keyword_heatmap, price_distribution, seller_ranking, sold
 from src.collector import collect_by_keywords
 from src.database import Database
 from src.exporter import export_reports
-from src.utils import ensure_dirs, load_config, new_batch_id, save_config, setup_logger
+from src.utils import ensure_dirs, load_config, new_batch_id, resolve_path, save_config, setup_logger
 
 st.set_page_config(page_title="MELI MX Moto Research", layout="wide")
 
 cfg = load_config()
 ensure_dirs("data", cfg["export_dir"], "logs")
-setup_logger(cfg["log_file"])
+active_log_file = setup_logger(cfg["log_file"])
 
 db = Database(cfg["database_path"])
 db.init_db()
@@ -39,14 +39,13 @@ def build_client() -> MeliApiClient:
     )
 
 
-
-
 def read_log_lines(log_file: str, max_lines: int = 300) -> str:
-    p = Path(log_file)
+    p = resolve_path(log_file)
     if not p.exists():
         return "日志文件不存在，先执行一次采集后再查看。"
     lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
     return "\n".join(lines[-max_lines:]) if lines else "日志为空。"
+
 
 def load_items_df() -> pd.DataFrame:
     with sqlite3.connect(cfg["database_path"]) as conn:
@@ -154,11 +153,15 @@ elif page == "运行日志":
     auto = col2.checkbox("自动刷新(3秒)", value=False)
     if st.button("刷新日志"):
         st.rerun()
-    log_text = read_log_lines(cfg.get("log_file", "logs/app.log"), int(lines))
+    log_cfg = cfg.get("log_file", "logs/app.log")
+    resolved_path = resolve_path(log_cfg)
+    st.caption(f"配置路径: {log_cfg}")
+    st.caption(f"实际路径: {resolved_path}")
+    st.caption(f"文件存在: {'是' if resolved_path.exists() else '否'}")
+    st.caption(f"当前写入路径: {active_log_file}")
+    log_text = read_log_lines(log_cfg, int(lines))
     st.code(log_text, language="log")
     if auto:
-        import time
-
         time.sleep(3)
         st.rerun()
 
