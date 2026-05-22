@@ -1,0 +1,17 @@
+site_id: "MLM"
+currency: "MXN"
+
+web_base_url: "https://listado.mercadolibre.com.mx"
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+random_delay_min_seconds: 3.0
+random_delay_max_seconds: 8.0
+
+default_limit_per_keyword: 200
+
+request_timeout: 30
+max_retries: 4
+retry_429_sleep_seconds: 60
+
+database_path: "data/meli_market.db"
+export_dir: "data/exports"
+log_file: "logs/app.log"
