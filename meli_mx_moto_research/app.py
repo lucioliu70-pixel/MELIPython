@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import sqlite3
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -38,13 +39,22 @@ def build_client() -> MeliApiClient:
     )
 
 
+
+
+def read_log_lines(log_file: str, max_lines: int = 300) -> str:
+    p = Path(log_file)
+    if not p.exists():
+        return "日志文件不存在，先执行一次采集后再查看。"
+    lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
+    return "\n".join(lines[-max_lines:]) if lines else "日志为空。"
+
 def load_items_df() -> pd.DataFrame:
     with sqlite3.connect(cfg["database_path"]) as conn:
         return pd.read_sql_query("SELECT * FROM items_snapshot", conn)
 
 
 st.title("美客多墨西哥摩配市场行情采集器")
-page = st.sidebar.radio("页面", ["采集任务", "市场总览", "关键词分析", "卖家分析", "导出报表", "配置中心"])
+page = st.sidebar.radio("页面", ["采集任务", "市场总览", "关键词分析", "卖家分析", "导出报表", "配置中心", "运行日志"])
 
 if page == "配置中心":
     st.subheader("可视化配置中心")
@@ -136,6 +146,21 @@ elif page == "采集任务":
         except Exception as e:
             logger.exception(e)
             st.error(f"采集失败: {e}")
+
+elif page == "运行日志":
+    st.subheader("运行日志")
+    col1, col2 = st.columns([1, 1])
+    lines = col1.number_input("显示最近日志行数", min_value=50, max_value=3000, value=300, step=50)
+    auto = col2.checkbox("自动刷新(3秒)", value=False)
+    if st.button("刷新日志"):
+        st.rerun()
+    log_text = read_log_lines(cfg.get("log_file", "logs/app.log"), int(lines))
+    st.code(log_text, language="log")
+    if auto:
+        import time
+
+        time.sleep(3)
+        st.rerun()
 
 else:
     df = load_items_df()

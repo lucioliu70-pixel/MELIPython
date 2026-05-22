@@ -43,3 +43,9 @@ streamlit run app.py
 - `keyword_summary.xlsx`
 - `seller_summary.xlsx`
 - `opportunity_report.xlsx`
+
+
+## 日志可视化
+- 左侧菜单新增 `运行日志` 页面
+- 支持查看最近N行日志
+- 支持手动刷新与3秒自动刷新
