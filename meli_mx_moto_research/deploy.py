@@ -22,6 +22,10 @@ def main() -> None:
     py = str(venv_dir / "Scripts" / "python.exe") if os.name == "nt" else str(venv_dir / "bin" / "python")
     run([py, "-m", "pip", "install", "--upgrade", "pip"])
     run([py, "-m", "pip", "install", "-r", "requirements.txt"])
+
+    # Ensure Playwright browser binaries exist (fixes: Executable doesn't exist ... chrome-headless-shell.exe)
+    run([py, "-m", "playwright", "install", "chromium"])
+
     run([py, "-m", "streamlit", "run", "app.py"])
 
 
