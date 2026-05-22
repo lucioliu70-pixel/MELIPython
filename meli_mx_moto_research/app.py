@@ -32,9 +32,10 @@ def build_client() -> MeliApiClient:
         sleep_seconds=cfg["request_sleep_seconds"],
         max_retries=cfg["max_retries"],
         retry_429_sleep=cfg["retry_429_sleep_seconds"],
-        base_url=cfg.get("api_base_url", "https://api.mercadolibre.com"),
-        search_path_template=cfg.get("search_path_template", "/sites/{site_id}/search"),
-        item_path_template=cfg.get("item_path_template", "/items/{item_id}"),
+        base_url=cfg.get("web_base_url", "https://listado.mercadolibre.com.mx"),
+        user_agent=cfg.get("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"),
+        random_delay_min=float(cfg.get("random_delay_min_seconds", 1.2)),
+        random_delay_max=float(cfg.get("random_delay_max_seconds", 2.4)),
     )
 
 
@@ -66,9 +67,10 @@ if page == "配置中心":
         col1, col2 = st.columns(2)
         site_id = col1.text_input("站点ID", value=cfg.get("site_id", "MLM"))
         currency = col2.text_input("币种", value=cfg.get("currency", "MXN"))
-        api_base_url = st.text_input("API Base URL", value=cfg.get("api_base_url", "https://api.mercadolibre.com"))
-        search_path_template = st.text_input("搜索接口模板", value=cfg.get("search_path_template", "/sites/{site_id}/search"))
-        item_path_template = st.text_input("详情接口模板", value=cfg.get("item_path_template", "/items/{item_id}"))
+        web_base_url = st.text_input("网页采集 Base URL", value=cfg.get("web_base_url", "https://listado.mercadolibre.com.mx"))
+        user_agent = st.text_input("User-Agent", value=cfg.get("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"))
+        delay_min = st.number_input("随机延迟最小秒数", min_value=1.0, max_value=30.0, value=float(cfg.get("random_delay_min_seconds", 1.2)), step=0.1)
+        delay_max = st.number_input("随机延迟最大秒数", min_value=1.0, max_value=60.0, value=float(cfg.get("random_delay_max_seconds", 2.4)), step=0.1)
         default_limit = st.number_input("默认每关键词采集量", min_value=1, max_value=1000, value=int(cfg.get("default_limit_per_keyword", 200)))
         timeout = st.number_input("请求超时(秒)", min_value=3, max_value=120, value=int(cfg.get("request_timeout", 20)))
         req_sleep = st.number_input("请求间隔(秒)", min_value=1.2, max_value=30.0, value=float(cfg.get("request_sleep_seconds", 1.2)), step=0.1)
@@ -83,9 +85,10 @@ if page == "配置中心":
         new_cfg = {
             "site_id": site_id,
             "currency": currency,
-            "api_base_url": api_base_url,
-            "search_path_template": search_path_template,
-            "item_path_template": item_path_template,
+            "web_base_url": web_base_url,
+            "user_agent": user_agent,
+            "random_delay_min_seconds": float(delay_min),
+            "random_delay_max_seconds": float(delay_max),
             "default_limit_per_keyword": int(default_limit),
             "request_timeout": int(timeout),
             "request_sleep_seconds": float(req_sleep),
@@ -99,8 +102,8 @@ if page == "配置中心":
         st.success("配置已保存到 config.yaml，请刷新或重启应用使全局配置生效。")
 
     st.markdown("---")
-    st.subheader("API 连通性测试")
-    if st.button("测试 Mercado Libre API"):
+    st.subheader("网页采集连通性测试")
+    if st.button("测试 Mercado Libre 网页采集"):
         ok, msg = build_client().health_check(cfg["site_id"])
         if ok:
             st.success(msg)

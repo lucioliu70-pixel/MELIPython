@@ -1,8 +1,10 @@
 site_id: "MLM"
 currency: "MXN"
-api_base_url: "https://api.mercadolibre.com"
-search_path_template: "/sites/{site_id}/search"
-item_path_template: "/items/{item_id}"
+
+web_base_url: "https://listado.mercadolibre.com.mx"
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+random_delay_min_seconds: 1.2
+random_delay_max_seconds: 2.4
 
 default_limit_per_keyword: 200
 

@@ -7,3 +7,4 @@ pydantic
 loguru
 plotly
 pyyaml
+beautifulsoup4
