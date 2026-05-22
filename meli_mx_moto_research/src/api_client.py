@@ -5,38 +5,34 @@ import time
 from typing import Any, Dict, List
 from urllib.parse import quote_plus
 
-import requests
 from bs4 import BeautifulSoup
 from loguru import logger
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 
 
 class MeliApiClient:
     def __init__(
         self,
-        timeout: int = 20,
-        sleep_seconds: float = 1.2,
-        max_retries: int = 3,
+        timeout: int = 30,
+        max_retries: int = 4,
         retry_429_sleep: int = 60,
         base_url: str = "https://listado.mercadolibre.com.mx",
-        user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        random_delay_min: float = 1.2,
-        random_delay_max: float = 2.4,
+        user_agent: str = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        random_delay_min: float = 3.0,
+        random_delay_max: float = 8.0,
     ):
         self.timeout = timeout
-        self.sleep_seconds = sleep_seconds
         self.max_retries = max_retries
         self.retry_429_sleep = retry_429_sleep
         self.base_url = base_url.rstrip("/")
         self.random_delay_min = random_delay_min
         self.random_delay_max = random_delay_max
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "User-Agent": user_agent,
-                "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            }
-        )
+        self.user_agent = user_agent
 
     @staticmethod
     def keyword_to_slug(keyword: str) -> str:
@@ -51,25 +47,51 @@ class MeliApiClient:
     def _random_sleep(self) -> None:
         time.sleep(random.uniform(self.random_delay_min, self.random_delay_max))
 
+    def _fetch_by_playwright(self, url: str) -> tuple[int, str]:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent=self.user_agent,
+                locale="es-MX",
+                viewport={"width": 1366, "height": 768},
+            )
+            page = context.new_page()
+            try:
+                resp = page.goto(url, wait_until="domcontentloaded", timeout=self.timeout * 1000)
+                page.wait_for_timeout(1200)
+                status = resp.status if resp else 0
+                html = page.content()
+                return status, html
+            finally:
+                context.close()
+                browser.close()
+
     def fetch_search_page(self, keyword: str, offset: int = 0) -> str:
         base = self.build_search_url(keyword)
         url = base if offset <= 0 else f"{base}_Desde_{offset + 1}_NoIndex_True"
+
         for attempt in range(1, self.max_retries + 1):
             try:
-                resp = self.session.get(url, timeout=self.timeout)
-                if resp.status_code == 429:
-                    logger.warning("429 rate limited. wait {}s attempt {}/{}", self.retry_429_sleep, attempt, self.max_retries)
+                status, html = self._fetch_by_playwright(url)
+                if status == 429 or "local_rate_limited" in html.lower():
+                    logger.warning("rate limited for {} wait {}s attempt {}/{}", url, self.retry_429_sleep, attempt, self.max_retries)
                     time.sleep(self.retry_429_sleep)
                     continue
-                if resp.status_code in (403, 503):
-                    logger.error("{} forbidden/unavailable for {}", resp.status_code, url)
+                if status in (403, 503):
+                    logger.warning("status {} for {} attempt {}/{}", status, url, attempt, self.max_retries)
                     self._random_sleep()
                     continue
-                resp.raise_for_status()
+                if status >= 400:
+                    logger.warning("status {} for {} attempt {}/{}", status, url, attempt, self.max_retries)
+                    self._random_sleep()
+                    continue
                 self._random_sleep()
-                return resp.text
-            except requests.RequestException as e:
-                logger.warning("page fetch failed attempt {}/{} url={} error={}", attempt, self.max_retries, url, e)
+                return html
+            except PlaywrightTimeoutError:
+                logger.warning("playwright timeout for {} attempt {}/{}", url, attempt, self.max_retries)
+                self._random_sleep()
+            except Exception as e:
+                logger.warning("playwright fetch failed for {} attempt {}/{} error={}", url, attempt, self.max_retries, e)
                 self._random_sleep()
         return ""
 
@@ -90,12 +112,8 @@ class MeliApiClient:
             sold_el = card.select_one("span.poly-component__sold-quantity")
             shop_el = card.select_one("span.poly-component__seller")
 
-            price = 0.0
-            if price_txt.isdigit():
-                price = float(price_txt)
-            else:
-                digits = "".join(ch for ch in price_txt if ch.isdigit())
-                price = float(digits) if digits else 0.0
+            digits = "".join(ch for ch in price_txt if ch.isdigit())
+            price = float(digits) if digits else 0.0
 
             items.append(
                 {
@@ -112,6 +130,8 @@ class MeliApiClient:
 
     def health_check(self, site_id: str = "MLM") -> tuple[bool, str]:
         html = self.fetch_search_page("cadena moto", offset=0)
+        if "local_rate_limited" in html.lower():
+            return False, "触发 local_rate_limited，已启用自动等待重试策略"
         items = self.parse_search_results(html)
         if not items:
             return False, "网页采集不可用（可能被风控/网络拦截）"

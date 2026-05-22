@@ -7,6 +7,7 @@
 ### 方式B：手动安装
 ```bash
 pip install -r requirements.txt
+python -m playwright install chromium
 ```
 
 ## 运行教程
@@ -15,11 +16,18 @@ streamlit run app.py
 ```
 打开 http://localhost:8501
 
-## 采集模式说明（已改为网页采集）
-由于 `https://api.mercadolibre.com/sites/MLM/search` 可能返回 403，当前版本采用前台网页采集：
+## 采集模式说明（Playwright 网页采集）
+由于 `https://api.mercadolibre.com/sites/MLM/search` 可能返回 403，当前版本采用 Playwright 前台网页采集：
 - 站点：`https://listado.mercadolibre.com.mx/`
 - 关键词URL规则：`cadena moto -> /cadena-moto`
 - 采集字段：标题、价格、商品链接、销量/评价信息（页面可见时）、店铺信息（页面可见时）
+
+## 反限流策略
+- 真实浏览器 User-Agent
+- 随机延迟（默认 3-8 秒）
+- 禁止高并发（单线程串行采集）
+- 失败重试（默认最多4次）
+- 命中 rate limit / `local_rate_limited` 自动等待60秒后继续
 
 ## 配置教程
 在左侧 `配置中心` 可配置：
@@ -35,8 +43,3 @@ streamlit run app.py
 - `keyword_summary.xlsx`
 - `seller_summary.xlsx`
 - `opportunity_report.xlsx`
-
-## 合规与频率控制
-- 增加 User-Agent
-- 随机延迟 + 重试机制
-- 避免高频请求

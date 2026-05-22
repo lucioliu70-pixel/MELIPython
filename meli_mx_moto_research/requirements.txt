@@ -8,3 +8,4 @@ loguru
 plotly
 pyyaml
 beautifulsoup4
+playwright

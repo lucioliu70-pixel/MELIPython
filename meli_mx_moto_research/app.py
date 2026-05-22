@@ -29,7 +29,6 @@ db.init_db()
 def build_client() -> MeliApiClient:
     return MeliApiClient(
         timeout=cfg["request_timeout"],
-        sleep_seconds=cfg["request_sleep_seconds"],
         max_retries=cfg["max_retries"],
         retry_429_sleep=cfg["retry_429_sleep_seconds"],
         base_url=cfg.get("web_base_url", "https://listado.mercadolibre.com.mx"),
@@ -72,9 +71,8 @@ if page == "配置中心":
         delay_min = st.number_input("随机延迟最小秒数", min_value=1.0, max_value=30.0, value=float(cfg.get("random_delay_min_seconds", 1.2)), step=0.1)
         delay_max = st.number_input("随机延迟最大秒数", min_value=1.0, max_value=60.0, value=float(cfg.get("random_delay_max_seconds", 2.4)), step=0.1)
         default_limit = st.number_input("默认每关键词采集量", min_value=1, max_value=1000, value=int(cfg.get("default_limit_per_keyword", 200)))
-        timeout = st.number_input("请求超时(秒)", min_value=3, max_value=120, value=int(cfg.get("request_timeout", 20)))
-        req_sleep = st.number_input("请求间隔(秒)", min_value=1.2, max_value=30.0, value=float(cfg.get("request_sleep_seconds", 1.2)), step=0.1)
-        max_retries = st.number_input("最大重试次数", min_value=1, max_value=10, value=int(cfg.get("max_retries", 3)))
+        timeout = st.number_input("请求超时(秒)", min_value=3, max_value=120, value=int(cfg.get("request_timeout", 30)))
+        max_retries = st.number_input("最大重试次数", min_value=1, max_value=10, value=int(cfg.get("max_retries", 4)))
         retry_429 = st.number_input("429等待秒数", min_value=10, max_value=600, value=int(cfg.get("retry_429_sleep_seconds", 60)))
         db_path = st.text_input("数据库路径", value=cfg.get("database_path", "data/meli_market.db"))
         export_dir = st.text_input("导出目录", value=cfg.get("export_dir", "data/exports"))
@@ -91,7 +89,6 @@ if page == "配置中心":
             "random_delay_max_seconds": float(delay_max),
             "default_limit_per_keyword": int(default_limit),
             "request_timeout": int(timeout),
-            "request_sleep_seconds": float(req_sleep),
             "max_retries": int(max_retries),
             "retry_429_sleep_seconds": int(retry_429),
             "database_path": db_path,
