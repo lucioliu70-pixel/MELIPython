@@ -1,0 +1,13 @@
+site_id: "MLM"
+currency: "MXN"
+
+default_limit_per_keyword: 200
+
+request_timeout: 20
+request_sleep_seconds: 1.2
+max_retries: 3
+retry_429_sleep_seconds: 60
+
+database_path: "data/meli_market.db"
+export_dir: "data/exports"
+log_file: "logs/app.log"

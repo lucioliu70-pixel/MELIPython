@@ -1,0 +1,9 @@
+requests
+pandas
+openpyxl
+streamlit
+schedule
+pydantic
+loguru
+plotly
+pyyaml
