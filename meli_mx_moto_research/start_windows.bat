@@ -2,16 +2,16 @@
 setlocal
 cd /d "%~dp0"
 
-REM 某些精简系统可能没有 chcp，可忽略失败
+REM Try UTF-8 code page; ignore failure on minimal systems
 chcp 65001 >nul 2>nul
 
-echo [INFO] 正在检查 Python...
+echo [INFO] Checking Python...
 python --version >nul 2>nul
 if errorlevel 1 (
   py --version >nul 2>nul
   if errorlevel 1 (
-    echo [错误] 未找到 Python，请先安装 Python 3.11+ 并勾选 Add Python to PATH
-    echo [提示] 安装完成后，重新打开命令行再执行本脚本
+    echo [ERROR] Python not found. Install Python 3.11+ and enable "Add Python to PATH".
+    echo [HINT] Reopen terminal after installation, then run this script again.
     pause
     exit /b 1
   ) else (
@@ -21,11 +21,11 @@ if errorlevel 1 (
   set "PY_CMD=python"
 )
 
-echo [INFO] 使用解释器: %PY_CMD%
-echo [INFO] 正在执行一键部署并启动...
+echo [INFO] Using interpreter: %PY_CMD%
+echo [INFO] Running one-click deploy...
 %PY_CMD% deploy.py
 if errorlevel 1 (
-  echo [错误] 启动失败，请检查上方错误日志
+  echo [ERROR] Startup failed. Check logs above.
   pause
   exit /b 1
 )
