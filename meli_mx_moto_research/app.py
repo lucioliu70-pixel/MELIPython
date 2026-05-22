@@ -26,6 +26,18 @@ db = Database(cfg["database_path"])
 db.init_db()
 
 
+def build_client() -> MeliApiClient:
+    return MeliApiClient(
+        timeout=cfg["request_timeout"],
+        sleep_seconds=cfg["request_sleep_seconds"],
+        max_retries=cfg["max_retries"],
+        retry_429_sleep=cfg["retry_429_sleep_seconds"],
+        base_url=cfg.get("api_base_url", "https://api.mercadolibre.com"),
+        search_path_template=cfg.get("search_path_template", "/sites/{site_id}/search"),
+        item_path_template=cfg.get("item_path_template", "/items/{item_id}"),
+    )
+
+
 def load_items_df() -> pd.DataFrame:
     with sqlite3.connect(cfg["database_path"]) as conn:
         return pd.read_sql_query("SELECT * FROM items_snapshot", conn)
@@ -54,6 +66,9 @@ if page == "配置中心":
         col1, col2 = st.columns(2)
         site_id = col1.text_input("站点ID", value=cfg.get("site_id", "MLM"))
         currency = col2.text_input("币种", value=cfg.get("currency", "MXN"))
+        api_base_url = st.text_input("API Base URL", value=cfg.get("api_base_url", "https://api.mercadolibre.com"))
+        search_path_template = st.text_input("搜索接口模板", value=cfg.get("search_path_template", "/sites/{site_id}/search"))
+        item_path_template = st.text_input("详情接口模板", value=cfg.get("item_path_template", "/items/{item_id}"))
         default_limit = st.number_input("默认每关键词采集量", min_value=1, max_value=1000, value=int(cfg.get("default_limit_per_keyword", 200)))
         timeout = st.number_input("请求超时(秒)", min_value=3, max_value=120, value=int(cfg.get("request_timeout", 20)))
         req_sleep = st.number_input("请求间隔(秒)", min_value=1.2, max_value=30.0, value=float(cfg.get("request_sleep_seconds", 1.2)), step=0.1)
@@ -68,6 +83,9 @@ if page == "配置中心":
         new_cfg = {
             "site_id": site_id,
             "currency": currency,
+            "api_base_url": api_base_url,
+            "search_path_template": search_path_template,
+            "item_path_template": item_path_template,
             "default_limit_per_keyword": int(default_limit),
             "request_timeout": int(timeout),
             "request_sleep_seconds": float(req_sleep),
@@ -83,13 +101,7 @@ if page == "配置中心":
     st.markdown("---")
     st.subheader("API 连通性测试")
     if st.button("测试 Mercado Libre API"):
-        test_client = MeliApiClient(
-            timeout=cfg["request_timeout"],
-            sleep_seconds=cfg["request_sleep_seconds"],
-            max_retries=cfg["max_retries"],
-            retry_429_sleep=cfg["retry_429_sleep_seconds"],
-        )
-        ok, msg = test_client.health_check(cfg["site_id"])
+        ok, msg = build_client().health_check(cfg["site_id"])
         if ok:
             st.success(msg)
         else:
@@ -109,12 +121,7 @@ elif page == "采集任务":
 
         progress = st.progress(0)
         log_box = st.empty()
-        client = MeliApiClient(
-            timeout=cfg["request_timeout"],
-            sleep_seconds=cfg["request_sleep_seconds"],
-            max_retries=cfg["max_retries"],
-            retry_429_sleep=cfg["retry_429_sleep_seconds"],
-        )
+        client = build_client()
         bid = new_batch_id()
 
         def update(p, msg):

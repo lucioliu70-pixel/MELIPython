@@ -1,5 +1,8 @@
 site_id: "MLM"
 currency: "MXN"
+api_base_url: "https://api.mercadolibre.com"
+search_path_template: "/sites/{site_id}/search"
+item_path_template: "/items/{item_id}"
 
 default_limit_per_keyword: 200
 

@@ -8,16 +8,26 @@ from loguru import logger
 
 
 class MeliApiClient:
-    BASE_URL = "https://api.mercadolibre.com"
-
-    def __init__(self, timeout: int = 20, sleep_seconds: float = 1.2, max_retries: int = 3, retry_429_sleep: int = 60):
+    def __init__(
+        self,
+        timeout: int = 20,
+        sleep_seconds: float = 1.2,
+        max_retries: int = 3,
+        retry_429_sleep: int = 60,
+        base_url: str = "https://api.mercadolibre.com",
+        search_path_template: str = "/sites/{site_id}/search",
+        item_path_template: str = "/items/{item_id}",
+    ):
         self.timeout = timeout
         self.sleep_seconds = sleep_seconds
         self.max_retries = max_retries
         self.retry_429_sleep = retry_429_sleep
+        self.base_url = base_url.rstrip("/")
+        self.search_path_template = search_path_template
+        self.item_path_template = item_path_template
 
     def _request(self, path: str, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
-        url = f"{self.BASE_URL}{path}"
+        url = f"{self.base_url}{path}"
         for attempt in range(1, self.max_retries + 1):
             try:
                 resp = requests.get(url, params=params, timeout=self.timeout)
@@ -39,13 +49,16 @@ class MeliApiClient:
         return {}
 
     def search_items(self, site_id: str, keyword: str, limit: int, offset: int) -> Dict[str, Any]:
-        return self._request(f"/sites/{site_id}/search", params={"q": keyword, "limit": limit, "offset": offset})
+        path = self.search_path_template.format(site_id=site_id)
+        return self._request(path, params={"q": keyword, "limit": limit, "offset": offset})
 
     def get_item_detail(self, item_id: str) -> Dict[str, Any]:
-        return self._request(f"/items/{item_id}")
+        path = self.item_path_template.format(item_id=item_id)
+        return self._request(path)
 
     def health_check(self, site_id: str) -> tuple[bool, str]:
-        payload = self._request(f"/sites/{site_id}/search", params={"q": "moto", "limit": 1, "offset": 0})
+        path = self.search_path_template.format(site_id=site_id)
+        payload = self._request(path, params={"q": "moto", "limit": 1, "offset": 0})
         if not payload:
             return False, "API 无响应或被限制（请检查网络/频率）"
         result_count = len(payload.get("results", []))

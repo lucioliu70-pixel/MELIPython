@@ -30,6 +30,7 @@ python deploy.py
 ### 可视化配置
 在左侧菜单进入 `配置中心`：
 - 编辑核心参数并保存到 `config.yaml`
+- 支持配置 API Base URL / 搜索接口模板 / 详情接口模板（采集接口可配置）
 - 导出当前配置文件
 - 导入配置文件快速切换环境
 - 测试 Mercado Libre API 连通性
